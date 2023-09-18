@@ -1,16 +1,43 @@
 "use client";
+import React from "react";
 import { Input } from "./ui/input";
 import { useChat } from "ai/react";
 import { Button } from "./ui/button";
 import { Send } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+import { Message } from "ai";
 import MessagesList from "./messages-list";
 
 type Props = { chatId: number };
 
 const MainChat = ({ chatId }: Props) => {
+  const { data, isLoading } = useQuery({
+    queryKey: ["chat", chatId],
+    queryFn: async () => {
+      const response = await axios.post<Message[]>("/api/get-messages", {
+        chatId,
+      });
+      return response.data;
+    },
+  });
+
   const { input, handleInputChange, handleSubmit, messages } = useChat({
     api: "/api/chat",
+    body: {
+      chatId,
+    },
+    initialMessages: data || [],
   });
+  React.useEffect(() => {
+    const messageContainer = document.getElementById("message-container");
+    if (messageContainer) {
+      messageContainer.scrollTo({
+        top: messageContainer.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  }, [messages]);
   return (
     <div
       className="relative max-h-screen overflow-scroll"
@@ -21,7 +48,8 @@ const MainChat = ({ chatId }: Props) => {
         <h3 className="text-xl font-bold">Chat</h3>
       </div>
 
-      <MessagesList messages={messages} />
+      {/* message list */}
+      <MessagesList messages={messages} isLoading={isLoading} />
 
       <form
         onSubmit={handleSubmit}
